@@ -1,7 +1,9 @@
 import React from 'react'
 import Head from 'next/head'
-import Navbar from '../components/Navbar'
 import classNames from 'classnames'
+
+import Navbar from '../components/Navbar'
+import RoundedFullButton from '../components/RoundedFullButton'
 
 export default function Home() {
   return (
@@ -69,8 +71,24 @@ export default function Home() {
               />
             </div>
           </div>
-          <div>Searching</div>
-          <div>Allow Location Access</div>
+          <div className="text-center">
+            <p className="dark:text-purple-lightest text-purple-dark text-[1.5rem] font-bold">
+              <span role={'img'}>🔍</span> Loading...
+            </p>
+          </div>
+          <div className="flex flex-col justify-center items-center gap-y-3 md:w-[500px] text-center">
+            <h1 className="text-2xl">🌍Where are you now? </h1>
+            <p>
+              <span role={'img'}>☝️</span> Allow access to your location if you
+              want to use the city from where you are in the search. Or just
+              write your city in{' '}
+              <b>
+                <span role={'img'}>📍</span> Location
+              </b>
+              .
+            </p>
+            <RoundedFullButton text="Allow location access" />
+          </div>
           <div>Search Results</div>
         </section>
       </main>
