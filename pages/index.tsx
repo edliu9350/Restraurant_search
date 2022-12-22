@@ -1,11 +1,72 @@
-import React from 'react'
+import React, { useState } from 'react'
 import Head from 'next/head'
 import classNames from 'classnames'
+
+import { useAppDispatch, useAppSelector } from '../app/hooks'
+import {
+  lastSearchUpdate,
+  latestResultsUpdate,
+  currentLocationUpdate,
+  isLocationCustomUpdate,
+} from '../features/appslice/appslice'
+import type { RootState } from '../app/store'
 
 import Navbar from '../components/Navbar'
 import RoundedFullButton from '../components/RoundedFullButton'
 
+import { DataResponse } from './api/search'
+import { Business } from '../types/Business'
+
+type SEARCH_STATE = 'INITIAL' | 'LOADING' | 'DONE'
+
 export default function Home() {
+  const [searchState, setSearchState] = useState<SEARCH_STATE>('INITIAL')
+  const [errors, setErrors] = useState<string[]>([])
+  const [resultsItems, setResultsItems] = useState<Business[]>([])
+
+  const dispatch = useAppDispatch()
+  const lastSearch = useAppSelector((state: RootState) => state.app.lastSearch)
+  const currentLocation = useAppSelector(
+    (state: RootState) => state.app.currentLocation
+  )
+  const isLocationCustom = useAppSelector(
+    (state: RootState) => state.app.isLocationCustom
+  )
+
+  const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (currentLocation === '') {
+      alert("You can't search without a location")
+      return
+    }
+
+    if (lastSearch === '') {
+      alert("You can't search without a term to search")
+    }
+
+    setErrors([])
+    setSearchState('LOADING')
+
+    try {
+      const searchResponse = await fetch('/api/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'applicatoin/json',
+        },
+        body: JSON.stringify({ term: lastSearch, location: currentLocation }),
+      })
+      const { results, message } = (await searchResponse.json()) as DataResponse
+
+      if (message === 'Location_NOT_FOUND' || message === 'NO_RESULTS') {
+        if (!errors.includes(message)) {
+          setErrors([...errors, message])
+        }
+      }
+
+      setResultsItems(results)
+    } catch (error) {}
+  }
+
   return (
     <>
       <Head>
@@ -22,7 +83,7 @@ export default function Home() {
               'mt-[10rem]'
             )}
           >
-            <form>
+            <form onSubmit={handleSearch}>
               <label className="mb-2 font-medium sr-only dark:text-white">
                 Search
               </label>
@@ -51,6 +112,10 @@ export default function Home() {
                   placeholder="Search for restaurants and more"
                   required
                   autoComplete="off"
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                    dispatch(lastSearchUpdate(event.target.value))
+                  }}
+                  value={lastSearch}
                 />
                 <button
                   type="submit"
@@ -68,6 +133,10 @@ export default function Home() {
                 type="text"
                 className="w-48 md:w-auto p-3 pl-5 border-b-2 border-l-2 border-r-2 border-purple-dark text-[1.1rem] rounded-br-[2.2rem] focus:ring-purple-lighest focus:border-purple-lighest outline-none bg-white dark:bg-[black] transition"
                 placeholder="City"
+                value={currentLocation}
+                onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                  dispatch(currentLocationUpdate(event.target.value))
+                }}
               />
             </div>
           </div>
