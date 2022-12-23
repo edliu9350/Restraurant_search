@@ -64,7 +64,13 @@ export default function Home() {
       }
 
       setResultsItems(results)
-    } catch (error) {}
+      dispatch(latestResultsUpdate(results))
+      setSearchState('DONE')
+    } catch (error) {
+      if (error instanceof Error) {
+        setErrors([...errors, error.message])
+      }
+    }
   }
 
   return (
