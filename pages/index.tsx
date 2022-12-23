@@ -14,6 +14,7 @@ import type { RootState } from '../app/store'
 
 import Navbar from '../components/Navbar'
 import RoundedFullButton from '../components/RoundedFullButton'
+import Results from '../components/results'
 
 import { DataResponse } from './api/search'
 import { Business } from '../types/Business'
@@ -119,10 +120,9 @@ export default function Home() {
         <Navbar />
         <section className="px-2 py-4 flex flex-col md:justify-center md:items-center gap-y-4">
           <div
-            className={classNames(
-              'flex flex-col transition-all duration-300',
-              'mt-[10rem]'
-            )}
+            className={classNames('flex flex-col transition-all duration-300', {
+              'mt-[10rem]': searchState === 'INITIAL',
+            })}
           >
             <form onSubmit={handleSearch}>
               <label className="mb-2 font-medium sr-only dark:text-white">
@@ -199,9 +199,11 @@ export default function Home() {
             </div>
           </div>
           <div className="text-center">
-            <p className="dark:text-purple-lightest text-purple-dark text-[1.5rem] font-bold">
-              <span role={'img'}>🔍</span> Loading...
-            </p>
+            {searchState === 'LOADING' && (
+              <p className="dark:text-purple-lightest text-purple-dark text-[1.5rem] font-bold">
+                <span role={'img'}>🔍</span> Loading...
+              </p>
+            )}
           </div>
           <div className="flex flex-col justify-center items-center gap-y-3 md:w-[500px] text-center">
             <h1 className="text-2xl">🌍Where are you now? </h1>
@@ -216,7 +218,7 @@ export default function Home() {
             </p>
             <RoundedFullButton text="Allow location access" />
           </div>
-          <div>Search Results</div>
+          <Results resultsItems={resultsItems} />
         </section>
       </main>
     </>
