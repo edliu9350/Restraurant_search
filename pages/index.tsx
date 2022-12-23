@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Head from 'next/head'
+import { auditTime, Subject } from 'rxjs'
 import classNames from 'classnames'
 
 import { useAppDispatch, useAppSelector } from '../app/hooks'
@@ -19,10 +20,14 @@ import { Business } from '../types/Business'
 
 type SEARCH_STATE = 'INITIAL' | 'LOADING' | 'DONE'
 
+const onInputChange$ = new Subject<string>()
+const MILISECONS_TO_COMPLETE_SEARCH = 1000
+
 export default function Home() {
   const [searchState, setSearchState] = useState<SEARCH_STATE>('INITIAL')
   const [errors, setErrors] = useState<string[]>([])
   const [resultsItems, setResultsItems] = useState<Business[]>([])
+  const [currentSuggestions, setCurrentSuggestions] = useState<String[]>([])
 
   const dispatch = useAppDispatch()
   const lastSearch = useAppSelector((state: RootState) => state.app.lastSearch)
@@ -32,6 +37,35 @@ export default function Home() {
   const isLocationCustom = useAppSelector(
     (state: RootState) => state.app.isLocationCustom
   )
+
+  /**
+   * Handle autocomplete suggestions
+   */
+  useEffect(() => {
+    console.log('Calling Rxjs')
+    const inputChangeSubscription = onInputChange$
+      .pipe(auditTime(MILISECONS_TO_COMPLETE_SEARCH))
+      .subscribe(async (term: string) => {
+        if (term.length === 0) {
+          setCurrentSuggestions([])
+          return
+        }
+        const response = await fetch('/api/autocomplete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ term }),
+        })
+        const { suggestions } = await response.json()
+        setCurrentSuggestions(suggestions)
+      })
+
+    return () => {
+      console.log('Clear Rxjs')
+      inputChangeSubscription.unsubscribe()
+    }
+  }, [])
 
   const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -46,6 +80,7 @@ export default function Home() {
 
     setErrors([])
     setSearchState('LOADING')
+    setCurrentSuggestions([])
 
     try {
       const searchResponse = await fetch('/api/search', {
@@ -120,6 +155,7 @@ export default function Home() {
                   autoComplete="off"
                   onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
                     dispatch(lastSearchUpdate(event.target.value))
+                    onInputChange$.next(event.target.value)
                   }}
                   value={lastSearch}
                 />
@@ -130,6 +166,22 @@ export default function Home() {
                   Search
                 </button>
               </div>
+              {currentSuggestions.length > 0 && (
+                <div className="bg-white dark:bg-almost-black dark:border-almost-black absolute shadow-xl md:w-[760px] border border-gray">
+                  {currentSuggestions.map((suggestion, index) => (
+                    <div
+                      className="w-full hover:text-purple-dark p-2 pl-10 hover:bg-almost-white dark:hover:bg-[black] transition cursor-pointer dark:hover:text-purple-lighest"
+                      onClick={() => {
+                        dispatch(lastSearchUpdate(suggestion))
+                        setCurrentSuggestions([])
+                      }}
+                      key={index}
+                    >
+                      {suggestion}
+                    </div>
+                  ))}
+                </div>
+              )}
             </form>
             <div className="flex items-center gap-x-3 md:gap-x-4 justify-end bg-purple-so-lighest md:w-[760px] rounded-b-[2.2rem] dark:bg-purple-dark">
               <p className="text-[1.1rem] dark:text-white">
